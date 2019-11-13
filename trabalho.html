@@ -9,6 +9,14 @@
     <title>Trabalho P.O - Simples</title>
 </head>
 <body>
+    <style>
+        .hidden {
+            display: none !important;
+        }
+        .yellow {
+            background: yellow;
+        }
+    </style>
     <div class="col">
         <br>
         <h1>Trabalho P.O - Simples</h1>
@@ -16,47 +24,52 @@
     </div>
     <div id="app">
         <form>
-            <div class="col">
-                <div class="form-group">
-                    <label for="tipo">Tipo do Método</label>
-                    <select :model='metodo' class="form-control" name="tipo" id="tipo">
-                        <option value="" disabled> Selecione o Tipo</option>
-                        <option value="Max">Max</option>
-                        <option value="Min">Min</option>
-                    </select>
+            <div class="row">
+                
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="tipo">Tipo do Método</label>
+                        <select :model='metodo' class="form-control" name="tipo" id="tipo">
+                            <option value="" disabled> Selecione o Tipo</option>
+                            <option value="Max">Max</option>
+                            <option value="Min">Min</option>
+                        </select>
+                    </div>
                 </div>
+
+                <div class="col-6">
+                    <br>    
+                    <button type="button" class="btn btn-primary" @click="adicionarColuna"> Add Coluna </button>
+                    <button type="button" class="btn btn-default" @click="removerColuna"> Remove Last Coluna</button>
+                    
+                    <button type="button" class="btn btn-primary" @click="adicionarLinha"> Add Linha </button>
+                    <button type="button" class="btn btn-default" @click="removerLinha"> Remove Last Linha</button>
+                </div>
+                
             </div>
-            
 
             <ul class="list-group">
                 <li class="list-group-item">
                     <h5>Restrições</h5>
                 </li>
                 <li class="list-group-item">
-                    
-
+                        
                         <div class="row" v-for="linha in linhas">
                             <div v-for="coluna in colunas">
                                 <div class="col">
                                     <label for="restX[]">Restrição X ({{ coluna }}) {{campos[linha - 1][coluna - 1]}} </label>
                                     <input type="number" name="campo[][]" v-model.number="campos[linha - 1][coluna - 1]" :id="'campos['+linha - 1 +']['+coluna - 1 +']'" step="0.01" class="form-control">
                                 </div>
+                                <div class="col"> <!-- hidden -->
+                                    <label for="folga[]">Folga ({{ coluna }})</label>
+                                    <input disabled type="number" name="folga[]" v-model.numver="folgas[linha -1][coluna - 1]" step="0.01" class="form-control">
+                                </div>
                             </div>
-                            <div style="width: 20%;">
+                            <div class="col-2">
                                 <label for="limite[]">Limite ({{linha }}) </label>
                                 <input type="number" name="limite[]" v-model.number="limite[linha - 1]" :id="limite['+linha - 1 +']" step="0.01" class="form-control">
                             </div>
                         </div>
-            
-                        <div>
-                            <br>
-                            <button type="button" class="btn btn-primary" @click="adicionarColuna"> Add Coluna </button>
-                            <button type="button" class="btn btn-default" @click="removerColuna"> Remove Last Coluna</button>
-                            
-                            <button type="button" class="btn btn-primary" @click="adicionarLinha"> Add Linha </button>
-                            <button type="button" class="btn btn-default" @click="removerLinha"> Remove Last Linha</button>
-                        </div>
-                    
                 </li>
             </ul>
 
@@ -72,6 +85,10 @@
                                 <input type="number" name="fo[]" v-model.number="funObj[coluna2]" id="fo['+coluna2-1+']" step="0.01" class="form-control">
                             </div>
                         </div>
+                        <div class="col-2">
+                            <label for="foX"> Z ({{ colunas }}) </label>
+                            <input type="number" name="fo[]" v-model.number="funObj[colunas + 1]" id="fo['+colunas+']" disabled step="0.01" class="form-control">
+                        </div>
                     </div>
                 </li>
             </ul>
@@ -83,30 +100,60 @@
 
         <hr>
         <br>
-        <div v-if="metodoFinalizado">
-            <h5>Metodo Finalizado</h5>
+        <div>
+            <table class="table table-stripped">
+                <thead>
+                    <th>
+                        <td colspan="3"> Resultados do metodo {{ camposMetodo.length }} /  {{ campos.length }} </td>
+                    </th>
+                </thead>
+                <tbody v-if="metodoFinalizado">
+                    <tr v-for="linha in linhas" :class="{'yellow': linha == linhaPivo+1 }">
+                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="coluna in colunas"> 
+                            {{  camposMetodo[linha - 1][coluna -1] }}
+                        </td>
+                        <td> {{ limitesMetodo[linha-1] }} </td>
+                        <td>
+                            {{ limitesMetodo[linha-1] / camposMetodo[linha - 1][posicaoMenorFo]   }}
+                        </td>
+                    </tr>
+                    <tr> <!-- Função Objetivo -->
+                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="coluna in colunas + 1"> {{funObjMetodo[coluna]}} </td>
+                    </tr>
+                </tbody>
+            </table>
+            <!-- <h5>Metodo Finalizado</h5>
             <table>
                 <tr v-for="campoM in camposMetodo">
                     <td> {{ campoM }} </td>
                 </tr>
-            </table>
+            </table> -->
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script> -->
+    <script src="vue.js"></script>
     <script>
         var app = new Vue({
             el: '#app',
             data: {
+                cabecalhoHorizontal: [], // _
+                cabecalhoVertical: [], // |
                 metodo: 'Max',
                 metodoFinalizado: false,
-                linhas: 1,
+                linhas: 2,
                 colunas: 2,
                 campos: [],
                 limite: [],
+                folgas: [],
                 camposMetodo: [],
                 limitesMetodo: [],
                 funObj: [],
-                funObjMetodo: []
+                funObjMetodo: [],
+                linhaPivo: null,
+                menorlinhaPivo: null,
+                menorFo: 1,
+                posicaoMenorFo: -1,
+                paradaMax: false
             },
             methods: {
                 adicionarLinha() {
@@ -137,157 +184,132 @@
                             }
                         }
                     } else {
-                        // this.metodo == 'Max'
+                        this.funObjMetodo= [];
+                        this.menorFo= 1;
+                        this.posicaoMenorFo= -1;
+                        this.funObj[this.colunas + 1] = 0;
+                        
                         // Alteração da Função Objetivo antes de inicar o método
-                        // console.log('Max');
-                        
-                        let menorFo = 1;
-                        let posicaoMenorFo = -1;
-                        
-                        // Aqui o inicio da repetição
-                        for (let ind = 1; ind <= this.colunas ; ind++) {
+                        for (let ind = 1; ind <= this.colunas + 1; ind++) {
                             this.funObjMetodo[ind] = parseFloat(this.funObj[ind]) * -1;
-                            if (this.funObjMetodo[ind] < menorFo) {
-                                menorFo = this.funObjMetodo[ind];
-                                posicaoMenorFo = ind - 1;
+                            if (this.funObjMetodo[ind] < this.menorFo) {
+                                this.menorFo = this.funObjMetodo[ind];
+                                this.posicaoMenorFo = ind - 1;
                             }
                         }
 
-                        // Altera o sinal dos campos
+                        // seta as folgas
                         for (let ind = 0; ind <= this.linhas-1; ind++) {
-                            this.camposMetodo[ind] = new Array(this.colunas -1);
-                            this.limitesMetodo[ind] = parseFloat(this.limite[ind]) * -1;
                             for (let ind2 = 0; ind2 <= this.colunas-1; ind2++) {
-                               this.camposMetodo[ind][ind2] = parseFloat(this.campos[ind][ind2]) * -1;
+                                if (ind == ind2) {
+                                    this.folgas[ind][ind2] = 1;
+                                } else {
+                                    this.folgas[ind][ind2] = 0;
+                                }
                             }
+                            this.campos[ind] = this.campos[ind].concat(this.folgas[ind])
                         }
 
-                        // limites
-                        let linhaPivo = -1;
-                        var menorlinhaPivo = null;
-                        let divisaoLimitePorColuna = null;
-                        for (let ind = 0; ind <= this.linhas-1; ind++) {
-                            divisaoLimitePorColuna = this.limitesMetodo[ind] / this.camposMetodo[ind][posicaoMenorFo]
-                            if (menorlinhaPivo == null) {
-                                menorlinhaPivo = divisaoLimitePorColuna
-                            } else {
-                                if (divisaoLimitePorColuna > 0 && divisaoLimitePorColuna < menorlinhaPivo) {
-                                    menorlinhaPivo = divisaoLimitePorColuna
-                                }
-                            } 
-                        }
-                        
-                        // mostra os resultados
-                        this.metodoFinalizado = true;
+                        // Aqui o inicio da repetição
+                        console.log(this.campos)
+                        this.montarSimplexMax(this.campos, this.limite)
                         
                     }
-                }
+                },
+                montarSimplexMax(camposLocal, limiteLocal) {
+                    
+                    this.camposMetodo= [];
+                    this.limitesMetodo= [];
+                    this.linhaPivo= null;
+                    this.menorlinhaPivo= null;
+
+                    // Altera o sinal dos campos
+                    for (let ind = 0; ind <= this.linhas-1; ind++) {
+                        this.camposMetodo[ind] = new Array(this.colunas * 2 - 1);
+                        this.limitesMetodo[ind] = parseFloat(limiteLocal[ind]) * -1;
+                        for (let ind2 = 0; ind2 <= this.colunas * 2 -1; ind2++) {
+                            this.camposMetodo[ind][ind2] = parseFloat(camposLocal[ind][ind2]) * -1;
+                        }
+                    }
+
+                    // limites
+                    // let linhaPivo = -1;
+                    // var menorlinhaPivo = null;
+                    let divisaoLimitePorColuna = null;
+                    for (let ind = 0; ind <= this.linhas-1; ind++) {
+                        divisaoLimitePorColuna = this.limitesMetodo[ind] / this.camposMetodo[ind][this.posicaoMenorFo]
+                        if (this.menorlinhaPivo == null) {
+                            this.menorlinhaPivo = divisaoLimitePorColuna
+                            this.linhaPivo = ind
+                        } else {
+                            if (divisaoLimitePorColuna > 0 && divisaoLimitePorColuna < this.menorlinhaPivo) {
+                                this.menorlinhaPivo = divisaoLimitePorColuna
+                                this.linhaPivo = ind
+                            }
+                        } 
+                    }
+                    this.verificarParadaMax()
+                    
+                    if (!this.paradaMax) {
+                        setTimeout(() => {
+                            this.gaussMax(null, null, this.camposMetodo[this.linhaPivo], this.limitesMetodo, this.posicaoMenorFo)
+                            for (let ind; ind <= this.linhas-1;ind++) {
+                                if(ind != this.linhaPivo) {
+                                    // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], )
+                                    // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo )
+                                }
+                            }
+                        }, 2000)
+                    }
+                    
+                    this.metodoFinalizado = true;
+                    this.paradaMax = true;
+                },
+                verificarParadaMax() {
+                    for (let ind = 1; ind <= this.colunas ; ind++) {
+                        let posicaoMaiorQZero = 0;
+                        posicaoMaiorQZero = this.funObjMetodo.find((valor) => {
+                           return valor <=0
+                        }) 
+                        if (posicaoMaiorQZero >= 0) {
+                            this.paradaMax = true;
+                        } else {
+                            this.paradaMax = false;
+                        }
+                    }
+                    // mostra os resultados
+                    console.log('Verifica a parada ', this.paradaMax);
+                },
+                gaussMax(linha, limite, linhaPivo, limitePivo, posicaoPivo) {
+                    limitePivo = limitePivo[posicaoPivo];
+                    let valorPivo = linhaPivo[posicaoPivo];
+                    if (linha == null) {
+                        for(let ind = 0; ind < this.colunas * 2; ind++) {
+                            linhaPivo[ind] = linhaPivo[ind] / valorPivo
+                        }
+                        limitePivo = limitePivo / valorPivo
+                    } else {
+                        let modificadorOperacao = null
+                        if (linha[posicaoPivo] % linhaPivo[posicaoPivo] > 0) {
+                            modificadorOperacao = -1 // ou seja, mantem o sinal do treco
+                        } else {
+                            modificadorOperacao = 1
+                        }
+                        for(let ind = 0; ind < this.colunas * 2; ind++) {
+                            linha[ind] = linha[ind] - (linhaPivo[ind] * valorPivo * modificadorOperacao)
+                        }
+                        limite = limite / limitePivo * valorPivo * modificadorOperacao
+                    }
+                    console.log(linhaPivo, limitePivo)
+                },
             },
             created() {
                 for(let ind = 0; ind <= this.linhas; ind++) {
                     this.campos[ind] = new Array(this.colunas -1);
+                    this.folgas[ind] = new Array(this.colunas -1);
                 }
             }
         })
     </script>
 </body>
 </html>
-<!--
-    <?php
-    // var_dump($_POST);
-    if (isset($_POST)) {
-        if (!isset($_POST['restX']) || sizeof($_POST['restX']) < 1) {
-            echo "Preencha pelo menos um valor";
-            return false;
-        }
-        if (!isset($_POST['restY']) || sizeof($_POST['restY']) < 1) {
-            echo "Preencha pelo menos um valor";
-            return false;
-        }
-
-        if (strtolower($_POST['tipo']) == 'min') {
-            $array_x = [];
-            foreach($_POST['restX'] as $index => $valor) {
-                if (floatval($valor) == 0) {
-                    $array_x[$index] = 0;    
-                } else {
-                    $array_x[$index] = floatval($valor) * -1;
-                }
-            }
-
-            $array_y = [];
-            foreach($_POST['restY'] as $index => $valor) {
-                if (floatval($valor) == 0) {
-                    $array_y[$index] = 0;    
-                } else {
-                    $array_y[$index] = floatval($valor) * -1;
-                }
-            }
-
-            // var_dump($array_x);
-        }
-        if (strtolower($_POST['tipo']) == 'max') {
-            // Inserir calculos aqui
-            $foX = 0;
-            $foY = 0;
-            if (floatval($_POST['foX']) == 0) {
-                $foX = 0;
-            } else {
-                $foX = floatval($_POST['foX']) * -1;
-            }
-
-            if (floatval($_POST['foY']) == 0) {
-                $foY = 0;
-            } else {
-                $foY = floatval($_POST['foY']) * -1;
-            }
-
-            print_r($foX);
-            print_r($foY);
-        }
-    }
-?>
--->
-
-<!-- <div class="row" v-for="linha in linhas">
-        <div class="col">
-            <label for="restX[1]">Restrição X ({{linha}}) </label>
-            <input type="number" name="restX[]" :id="'restX['+linha+']'" step="0.01" class="form-control">
-        </div>
-        <div class="col">
-            <label for="restY[1]">Restrição Y ({{linha}}) </label>
-            <input type="number" name="restY[]" :id="'restY['+linha+']'" step="0.01" class="form-control">
-        </div>
-    </div> -->
-  <!--                 
-                <div class="row">
-                    <div class="col">
-                        <label for="restX[1]">Restrição X</label>
-                        <input type="number" name="restX[]" id="restX[1]" step="0.01" class="form-control">
-                    </div>
-                    <div class="col">
-                        <label for="restY[1]">Restrição Y</label>
-                        <input type="number" name="restY[]" id="restY[1]" step="0.01" class="form-control">
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col">
-                        <label for="restX[2]">Restrição X</label>
-                        <input type="number" name="restX[]" id="restX[2]" step="0.01" class="form-control">
-                    </div>
-                    <div class="col">
-                        <label for="restY[2]">Restrição Y</label>
-                        <input type="number" name="restY[]" id="restY[2]" step="0.01" class="form-control">
-                    </div>
-                </div> -->
-
-<!-- <div class="col">
-                            <label for="foX">Z de X</label>
-                            <input type="number" name="foX" id="foX" step="0.01" class="form-control">
-                        </div>
-                        <div class="col">
-                            <label for="foY">Z de Y</label>
-                            <input type="number" name="foY" id="foY" step="0.01" class="form-control">
-                        </div>
-                    -->
