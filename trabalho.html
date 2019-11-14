@@ -82,12 +82,16 @@
                         <div v-for="coluna2 in colunas">
                             <div class="col">
                                 <label for="foX">Z ({{ coluna2 - 1 }})</label>
-                                <input type="number" name="fo[]" v-model.number="funObj[coluna2]" id="fo['+coluna2-1+']" step="0.01" class="form-control">
+                                <input type="number" name="fo[]" v-model.number="funObj[coluna2 -1]" id="fo['+coluna2-1+']" step="0.01" class="form-control">
+                            </div>
+                            <div class="col"> <!-- hidden -->
+                                <label for="folga[]">Folgas da FO ({{ coluna2 }})</label>
+                                <input disabled type="number" name="folgasFo[]" v-model.numver="folgasFo[coluna2 - 1]" step="0.01" class="form-control">
                             </div>
                         </div>
                         <div class="col-2">
                             <label for="foX"> Z ({{ colunas }}) </label>
-                            <input type="number" name="fo[]" v-model.number="funObj[colunas + 1]" id="fo['+colunas+']" disabled step="0.01" class="form-control">
+                            <input type="number" name="fo[]" v-model.number="funObj[colunas]" id="fo['+colunas+']" disabled step="0.01" class="form-control">
                         </div>
                     </div>
                 </li>
@@ -104,21 +108,21 @@
             <table class="table table-stripped">
                 <thead>
                     <th>
-                        <td colspan="3"> Resultados do metodo {{ camposMetodo.length }} /  {{ campos.length }} </td>
+                        <td colspan="3"> Resultados do metodo  </td> <!-- {{ camposMetodo.length }} /  {{ campos.length }} -->
                     </th>
                 </thead>
-                <tbody v-if="metodoFinalizado">
+                <tbody v-if="metodoFinalizado" >
                     <tr v-for="linha in linhas" :class="{'yellow': linha == linhaPivo+1 }">
-                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="coluna in colunas"> 
+                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="(coluna, index) in colunas">
                             {{  camposMetodo[linha - 1][coluna -1] }}
                         </td>
                         <td> {{ limitesMetodo[linha-1] }} </td>
                         <td>
-                            {{ limitesMetodo[linha-1] / camposMetodo[linha - 1][posicaoMenorFo]   }}
+                            {{ camposMetodo[linha - 1][posicaoMenorFo] > 0 ? limitesMetodo[linha-1] / camposMetodo[linha - 1][posicaoMenorFo]  : 0 }}
                         </td>
                     </tr>
                     <tr> <!-- Função Objetivo -->
-                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="coluna in colunas + 1"> {{funObjMetodo[coluna]}} </td>
+                        <td :class="{'yellow': coluna ==  posicaoMenorFo + 1}" v-for="coluna in colunas"> {{funObjMetodo[coluna - 1]}} </td>
                     </tr>
                 </tbody>
             </table>
@@ -136,6 +140,7 @@
         var app = new Vue({
             el: '#app',
             data: {
+                numeroInteracoes: 1,
                 cabecalhoHorizontal: [], // _
                 cabecalhoVertical: [], // |
                 metodo: 'Max',
@@ -145,6 +150,7 @@
                 campos: [],
                 limite: [],
                 folgas: [],
+                folgasFo: [],
                 camposMetodo: [],
                 limitesMetodo: [],
                 funObj: [],
@@ -184,20 +190,14 @@
                             }
                         }
                     } else {
-                        this.funObjMetodo= [];
-                        this.menorFo= 1;
-                        this.posicaoMenorFo= -1;
-                        this.funObj[this.colunas + 1] = 0;
-                        
-                        // Alteração da Função Objetivo antes de inicar o método
-                        for (let ind = 1; ind <= this.colunas + 1; ind++) {
-                            this.funObjMetodo[ind] = parseFloat(this.funObj[ind]) * -1;
-                            if (this.funObjMetodo[ind] < this.menorFo) {
-                                this.menorFo = this.funObjMetodo[ind];
-                                this.posicaoMenorFo = ind - 1;
-                            }
+                        // Concatena a Função Objetivo com as folgas antes de inicar o método
+                        for (let ind = 0; ind <= this.colunas; ind++) {
+                            this.folgasFo[ind] = 0;
                         }
-
+                        this.funObj = this.funObj.concat(this.folgasFo);
+                        this.funObj[this.colunas] = 0;
+                        
+                        this.encontrarMenorPivo()
                         // seta as folgas
                         for (let ind = 0; ind <= this.linhas-1; ind++) {
                             for (let ind2 = 0; ind2 <= this.colunas-1; ind2++) {
@@ -211,13 +211,32 @@
                         }
 
                         // Aqui o inicio da repetição
-                        console.log(this.campos)
+                        // console.log(this.campos)
                         this.montarSimplexMax(this.campos, this.limite)
                         
                     }
                 },
-                montarSimplexMax(camposLocal, limiteLocal) {
+                encontrarMenorPivo() {
+                    this.funObjMetodo= [];
+                    this.menorFo = 0;
+                    this.posicaoMenorFo= -1;
                     
+                    // Alteração da Função Objetivo antes de inicar o método
+                    for (let ind = 0; ind <= this.colunas + this.folgasFo.length - 1; ind++) {
+                        console.log(this.funObj[ind]);
+                        
+                        this.funObjMetodo[ind] = this.funObj[ind] > 0  ? parseFloat(this.funObj[ind]) * -1 : 0 ;
+                        console.log(this.funObjMetodo[ind]);
+
+                        if (this.funObjMetodo[ind] < 0 && this.funObjMetodo[ind] < this.menorFo) {
+                            this.menorFo = this.funObjMetodo[ind];
+                            this.posicaoMenorFo = ind;
+                        }
+                    }
+                    // console.log(this.posicaoMenorFo, this.menorFo);
+                },
+                montarSimplexMax(camposLocal, limiteLocal) {
+                    this.metodoFinalizado = true;
                     this.camposMetodo= [];
                     this.limitesMetodo= [];
                     this.linhaPivo= null;
@@ -237,7 +256,7 @@
                     // var menorlinhaPivo = null;
                     let divisaoLimitePorColuna = null;
                     for (let ind = 0; ind <= this.linhas-1; ind++) {
-                        divisaoLimitePorColuna = this.limitesMetodo[ind] / this.camposMetodo[ind][this.posicaoMenorFo]
+                        divisaoLimitePorColuna = this.camposMetodo[ind][this.posicaoMenorFo] > 0 ? this.limitesMetodo[ind] / this.camposMetodo[ind][this.posicaoMenorFo] : 0
                         if (this.menorlinhaPivo == null) {
                             this.menorlinhaPivo = divisaoLimitePorColuna
                             this.linhaPivo = ind
@@ -248,22 +267,14 @@
                             }
                         } 
                     }
+
+                    // Parte que repete no Gauss
                     this.verificarParadaMax()
-                    
+                    // Chamada Recursiva
                     if (!this.paradaMax) {
-                        setTimeout(() => {
-                            this.gaussMax(null, null, this.camposMetodo[this.linhaPivo], this.limitesMetodo, this.posicaoMenorFo)
-                            for (let ind; ind <= this.linhas-1;ind++) {
-                                if(ind != this.linhaPivo) {
-                                    // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], )
-                                    // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo )
-                                }
-                            }
-                        }, 2000)
+                       this.loopAlgoritimoMax();
                     }
-                    
-                    this.metodoFinalizado = true;
-                    this.paradaMax = true;
+                    // this.paradaMax = true;
                 },
                 verificarParadaMax() {
                     for (let ind = 1; ind <= this.colunas ; ind++) {
@@ -280,33 +291,83 @@
                     // mostra os resultados
                     console.log('Verifica a parada ', this.paradaMax);
                 },
-                gaussMax(linha, limite, linhaPivo, limitePivo, posicaoPivo) {
-                    limitePivo = limitePivo[posicaoPivo];
+                gaussMax(linha, limite, linhaPivo, posicaoPivo, indiceLinha = null, linhaFo = false) {
+                    
                     let valorPivo = linhaPivo[posicaoPivo];
                     if (linha == null) {
                         for(let ind = 0; ind < this.colunas * 2; ind++) {
                             linhaPivo[ind] = linhaPivo[ind] / valorPivo
                         }
-                        limitePivo = limitePivo / valorPivo
+                        limite = limite / valorPivo
+                        
+                        this.camposMetodo[this.linhaPivo] = linhaPivo
+                        this.limitesMetodo[this.linhaPivo] = limite
+
+                        // console.log('Linha Pivo');
+                        // console.log(linhaPivo, limite)
                     } else {
+                        // console.log('Linha Antes ', linha, limite);
+                        
+                        let limitePivo = this.limitesMetodo[this.linhaPivo]
                         let modificadorOperacao = null
-                        if (linha[posicaoPivo] % linhaPivo[posicaoPivo] > 0) {
+                        if (linha[posicaoPivo] % linhaPivo[posicaoPivo] < 0) {
                             modificadorOperacao = -1 // ou seja, mantem o sinal do treco
                         } else {
                             modificadorOperacao = 1
                         }
-                        for(let ind = 0; ind < this.colunas * 2; ind++) {
-                            linha[ind] = linha[ind] - (linhaPivo[ind] * valorPivo * modificadorOperacao)
+                        
+                        limite = limite - limitePivo * linha[posicaoPivo] * modificadorOperacao
+                        if (linhaFo) {
+                            for (let ind = 0; ind <= this.colunas + this.folgasFo.length - 1; ind++) {
+                                linha[ind] = linha[ind] - (linhaPivo[ind] * linha[posicaoPivo] * modificadorOperacao)
+                            }
+                            this.funObj = this.funObjMetodo = linha
+                        } else {
+                            for(let ind = 0; ind < this.colunas * 2; ind++) {
+                                linha[ind] = linha[ind] - (linhaPivo[ind] * linha[posicaoPivo] * modificadorOperacao)
+                            }
+                            this.camposMetodo[indiceLinha] = linha
+                            this.limitesMetodo[indiceLinha] = limite    
                         }
-                        limite = limite / limitePivo * valorPivo * modificadorOperacao
+                        // console.log('Linha ');
+                        // console.log(linha, limite)
                     }
-                    console.log(linhaPivo, limitePivo)
+                    
                 },
+                loopAlgoritimoMax() {
+                    // this.metodoFinalizado = false;
+                    this.verificarParadaMax()
+                    
+                    if (!this.paradaMax) {
+                        setTimeout(() => {
+                            this.gaussMax(null, this.limitesMetodo[this.linhaPivo], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo)
+                            for (let ind = 0; ind <= this.linhas-1;ind++) {
+                                if(ind != this.linhaPivo) {
+                                    // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], )
+                                    this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo, ind)
+                                }
+                            }
+                            this.gaussMax(this.funObjMetodo, this.funObjMetodo[this.funObjMetodo.length-1], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo, null, true)
+                            // Recursividade
+                            this.encontrarMenorPivo()
+                            this.verificarParadaMax()
+                            if (!this.paradaMax) {
+                                this.loopAlgoritimoMax()
+                            }
+                            // this.numeroInteracoes++
+                            this.$nextTick(() => {
+                                this.metodoFinalizado = true;
+                            })
+                        }, 2000)
+                    }
+
+                }
             },
             created() {
                 for(let ind = 0; ind <= this.linhas; ind++) {
                     this.campos[ind] = new Array(this.colunas -1);
                     this.folgas[ind] = new Array(this.colunas -1);
+                    this.folgasFo[ind] = new Array(this.colunas -1);
                 }
             }
         })
