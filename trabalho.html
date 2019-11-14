@@ -60,10 +60,10 @@
                                     <label for="restX[]">Restrição X ({{ coluna }}) {{campos[linha - 1][coluna - 1]}} </label>
                                     <input type="number" name="campo[][]" v-model.number="campos[linha - 1][coluna - 1]" :id="'campos['+linha - 1 +']['+coluna - 1 +']'" step="0.01" class="form-control">
                                 </div>
-                                <div class="col"> <!-- hidden -->
-                                    <label for="folga[]">Folga ({{ coluna }})</label>
-                                    <input disabled type="number" name="folga[]" v-model.numver="folgas[linha -1][coluna - 1]" step="0.01" class="form-control">
-                                </div>
+                            </div>
+                            <div class="col" v-for="linha2 in linhas"> <!-- hidden -->
+                                <label for="folga[]">Folga ({{ linha }})</label>
+                                <input disabled type="number" name="folga[]" v-model.numver="folgas[linha -1][linha2 - 1]" step="0.01" class="form-control">
                             </div>
                             <div class="col-2">
                                 <label for="limite[]">Limite ({{linha }}) </label>
@@ -167,7 +167,7 @@
                     this.linhas++;
                     this.campos[this.linhas] = new Array(this.colunas);
                     this.limite[this.linhas] = new Array();
-                    console.log(this.campos);
+                    this.folgas[this.linhas] = new Array();
                 },
                 removerLinha() {
                     // this.linhas.shift();
@@ -199,14 +199,18 @@
                         
                         this.encontrarMenorPivo()
                         // seta as folgas
+                        this.folgas.pop();
                         for (let ind = 0; ind <= this.linhas-1; ind++) {
-                            for (let ind2 = 0; ind2 <= this.colunas-1; ind2++) {
+                            this.folgas[ind] = new Array(this.linhas);
+                            for (let ind2 = 0; ind2 <= this.linhas-1; ind2++) {
                                 if (ind == ind2) {
                                     this.folgas[ind][ind2] = 1;
                                 } else {
                                     this.folgas[ind][ind2] = 0;
                                 }
                             }
+                            console.log(this.folgas);
+                            
                             this.campos[ind] = this.campos[ind].concat(this.folgas[ind])
                         }
 
@@ -223,10 +227,10 @@
                     
                     // Alteração da Função Objetivo antes de inicar o método
                     for (let ind = 0; ind <= this.colunas + this.folgasFo.length - 1; ind++) {
-                        console.log(this.funObj[ind]);
+                        // console.log(this.funObj[ind]);
                         
                         this.funObjMetodo[ind] = this.funObj[ind] > 0  ? parseFloat(this.funObj[ind]) * -1 : 0 ;
-                        console.log(this.funObjMetodo[ind]);
+                        // console.log(this.funObjMetodo[ind]);
 
                         if (this.funObjMetodo[ind] < 0 && this.funObjMetodo[ind] < this.menorFo) {
                             this.menorFo = this.funObjMetodo[ind];
@@ -234,6 +238,25 @@
                         }
                     }
                     // console.log(this.posicaoMenorFo, this.menorFo);
+                },
+                encontrarMenorLinha() {
+                    // limites
+                    // let linhaPivo = -1;
+                    // var menorlinhaPivo = null;
+                    let divisaoLimitePorColuna = null;
+                    for (let ind = 0; ind <= this.linhas-1; ind++) {
+                        divisaoLimitePorColuna = this.camposMetodo[ind][this.posicaoMenorFo] != 0 ? 
+                        this.limitesMetodo[ind] / this.camposMetodo[ind][this.posicaoMenorFo] : 0
+                        if (this.menorlinhaPivo == null) {
+                            this.menorlinhaPivo = divisaoLimitePorColuna
+                            this.linhaPivo = ind
+                        } else {
+                            if (divisaoLimitePorColuna < 0 && divisaoLimitePorColuna != 0 && divisaoLimitePorColuna < this.menorlinhaPivo) {
+                                this.menorlinhaPivo = divisaoLimitePorColuna
+                                this.linhaPivo = ind
+                            }
+                        } 
+                    }
                 },
                 montarSimplexMax(camposLocal, limiteLocal) {
                     this.metodoFinalizado = true;
@@ -247,27 +270,12 @@
                         this.camposMetodo[ind] = new Array(this.colunas * 2 - 1);
                         this.limitesMetodo[ind] = parseFloat(limiteLocal[ind]) * -1;
                         for (let ind2 = 0; ind2 <= this.colunas * 2 -1; ind2++) {
-                            this.camposMetodo[ind][ind2] = parseFloat(camposLocal[ind][ind2]) * -1;
+                            this.camposMetodo[ind][ind2] = camposLocal[ind][ind2] != 0 ? parseFloat(camposLocal[ind][ind2]) * -1 : 0;
                         }
                     }
 
-                    // limites
-                    // let linhaPivo = -1;
-                    // var menorlinhaPivo = null;
-                    let divisaoLimitePorColuna = null;
-                    for (let ind = 0; ind <= this.linhas-1; ind++) {
-                        divisaoLimitePorColuna = this.camposMetodo[ind][this.posicaoMenorFo] > 0 ? this.limitesMetodo[ind] / this.camposMetodo[ind][this.posicaoMenorFo] : 0
-                        if (this.menorlinhaPivo == null) {
-                            this.menorlinhaPivo = divisaoLimitePorColuna
-                            this.linhaPivo = ind
-                        } else {
-                            if (divisaoLimitePorColuna > 0 && divisaoLimitePorColuna < this.menorlinhaPivo) {
-                                this.menorlinhaPivo = divisaoLimitePorColuna
-                                this.linhaPivo = ind
-                            }
-                        } 
-                    }
-
+                    this.encontrarMenorLinha()
+                    
                     // Parte que repete no Gauss
                     this.verificarParadaMax()
                     // Chamada Recursiva
@@ -341,7 +349,9 @@
                     if (!this.paradaMax) {
                         setTimeout(() => {
                             this.gaussMax(null, this.limitesMetodo[this.linhaPivo], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo)
-                            for (let ind = 0; ind <= this.linhas-1;ind++) {
+                            console.log(this.camposMetodo[this.linhaPivo]);
+                            
+                            /* for (let ind = 0; ind <= this.linhas-1;ind++) {
                                 if(ind != this.linhaPivo) {
                                     // this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], )
                                     this.gaussMax(this.camposMetodo[ind], this.limitesMetodo[ind], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo, ind)
@@ -350,11 +360,13 @@
                             this.gaussMax(this.funObjMetodo, this.funObjMetodo[this.funObjMetodo.length-1], this.camposMetodo[this.linhaPivo], this.posicaoMenorFo, null, true)
                             // Recursividade
                             this.encontrarMenorPivo()
+                            this.encontrarMenorLinha()
                             this.verificarParadaMax()
                             if (!this.paradaMax) {
-                                this.loopAlgoritimoMax()
+                                // this.loopAlgoritimoMax()
                             }
                             // this.numeroInteracoes++
+                            */
                             this.$nextTick(() => {
                                 this.metodoFinalizado = true;
                             })
@@ -366,8 +378,8 @@
             created() {
                 for(let ind = 0; ind <= this.linhas; ind++) {
                     this.campos[ind] = new Array(this.colunas -1);
-                    this.folgas[ind] = new Array(this.colunas -1);
                     this.folgasFo[ind] = new Array(this.colunas -1);
+                    this.folgas[ind] = new Array(this.linhas);
                 }
             }
         })
